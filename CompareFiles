@@ -1,0 +1,38 @@
+from collections import defaultdict
+from pathlib import Path
+import hashlib
+
+
+old_ver = input('old folder name:')
+old_path = Path(old_ver)
+
+new_ver = input('new folder name:')
+new_path = Path(new_ver)
+
+def get_hash(directory: Path) -> dict:
+    BUF_SIZE = 65536
+    file_info = {}
+    for item in directory.glob('**/*'):
+        sha256 = hashlib.sha256()
+        if not item.is_dir() and not item.is_symlink():
+            with open(item, 'rb') as updated_file:
+                while True:
+                    data = updated_file.read(BUF_SIZE)
+                    if not data:
+                        break
+
+                    sha256.update(data)
+                truncated_path = str(Path('/', *item.parts[3:]))
+                sha_hash = str(sha256.hexdigest())
+                #print(f'{truncated_path} {sha256.hexdigest()}')
+                file_info[truncated_path] = sha_hash
+    return file_info
+
+old_hash = defaultdict(str,get_hash(old_path))
+new_hash = get_hash(new_path)
+with open('out.csv','w') as output:
+    output.write("file, old, new\n")
+    for k,v in new_hash.items():
+        old_val = old_hash[k]
+        if old_val != v:
+            output.write(f"{k},{old_val},{v}\n")
